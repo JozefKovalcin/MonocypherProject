@@ -1,7 +1,7 @@
 # Zabezpeceny prenos suborov cez TCP
 
-Tento projekt implementuje system pre zabezpeceny prenos suborov cez TCP/IP siet s vyuzitim modernej kryptografie 
-a pokrocilych bezpecnostnych prvkov. Program zabezpecuje end-to-end sifrovanie s autentifikaciou, perfect forward secrecy, 
+Tento projekt implementuje system pre zabezpeceny prenos suborov cez TCP/IP siet s vyuzitim modernej kryptografie
+a pokrocilych bezpecnostnych prvkov. Program zabezpecuje end-to-end sifrovanie s autentifikaciou, perfect forward secrecy,
 a rotaciu klucov pocas prenosu.
 
 ## Bezpecnostne prvky
@@ -23,6 +23,7 @@ a rotaciu klucov pocas prenosu.
 - Detekcia odpojenia pomocou keepalive
 - Kontrola velkosti blokov proti preteceniu
 - Spolahlivy prenos s retransmisiou
+- Synchronizacia a potvrdenia prenosov pomocou custom protokolu
 
 ## Hlavne komponenty
 
@@ -31,8 +32,9 @@ a rotaciu klucov pocas prenosu.
 - Autentifikuje prichadzajuce spojenia
 - Desifruje a overuje prijate data
 - Uklada subory s prefixom "received_"
+- Synchronizuje rotaciu klucov s klientom
 
-### Klient (`client.c`) 
+### Klient (`client.c`)
 - Zobrazuje dostupne lokalne subory
 - Sifruje a fragmentuje subory na bloky
 - Synchronizuje rotaciu klucov so serverom
@@ -46,15 +48,16 @@ a rotaciu klucov pocas prenosu.
 
 ### Kryptograficke funkcie (`crypto_utils.c`, `crypto_utils.h`)
 - Generovanie nahodnych hodnot
-- Derivacia a rotacia klucov  
+- Derivacia a rotacia klucov
 - X25519 key exchange
 - Validacia klucov
+- Generovanie a verifikacia MAC tagov
 
 ## Poziadavky
 
 - C kompilator (GCC/MinGW)
 - Monocypher 4.0.2
-- Make 
+- Make
 
 ## Kompilacia
 
@@ -150,3 +153,4 @@ mingw32-make clean
 - Komprimacia pred sifrovanim
 - Obnovenie prerusenych prenosov
 - GUI rozhranie
+
