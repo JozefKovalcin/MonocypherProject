@@ -1,5 +1,17 @@
 # Historia zmien
+## 27. Januaar 2025
 
+### Strukturalne zmeny
+- Implementacia forward secrecy pomocou Diffie–Hellman
+- rozsirenie constanths.s o chybove hlasky, IP adresu, prefix suboru, ...
+
+### Bezpecnostne vylepsenia
+- Rotacia klucov po kazdych x blokoch
+
+### Sprava chyb
+- Rozsirenie mnostva chybovych sprav v programe
+
+  
 ## 19. December 2024
 
 ### Strukturalne zmeny
