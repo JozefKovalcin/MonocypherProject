@@ -85,7 +85,7 @@
 // Nastavenia klienta
 #define DEFAULT_SERVER_ADDRESS "127.0.0.1" // Predvolena IP adresa servera (localhost)
 
-// Texty pouzivatelskemu rozhrania
+// Texty pouzivatelskeho rozhrania
 #define PASSWORD_PROMPT "Enter password: " // Vyzva na zadanie hesla pre klienta
 #define PASSWORD_PROMPT_SERVER "Enter password for decryption: " // Vyzva na zadanie hesla pre server
 
