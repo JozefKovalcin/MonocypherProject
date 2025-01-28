@@ -1,20 +1,18 @@
-/********************************************************************************
- * Program:    Kryptografické utility pre zabezpečený prenos
+/*******************************************************************************
+ * Program:    Kryptograficke nastroje pre zabezpeceny prenos
  * Subor:      crypto_utils.h
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.0
  * Datum:      2024
  * 
  * Popis: 
- *     Hlavickový súbor obsahujúci deklarácie pomocných kryptografických funkcií:
- *     - Generovanie náhodných čísel pre nonce a salt
- *     - Deriváciu kľúča z hesla pomocou Argon2
- *     - Pomocné funkcie pre prácu s kryptografickými dátami
- * 
- * Zavislosti:
- *     - Monocypher 4.0.2 (implementacia sifrovania)
- *     - constants.h (definicie konstant pre program)
- *******************************************************************************/
+ *     Tento subor obsahuje funkcie pre:
+ *     - Vytvaranie nahodnych cisel pre bezpecne sifrovanie
+ *     - Vytvaranie klucov z hesiel pomocou Argon2
+ *     - Pravidelnu vymenu klucov pocas prenosu
+ *     - Zabezpecenu vymenu klucov pomocou X25519
+ *     - Spravovanie sifrovanych spojeni
+ ******************************************************************************/
 
 #ifndef CRYPTO_UTILS_H
 #define CRYPTO_UTILS_H
@@ -25,18 +23,38 @@
 #include "constants.h"    // Definicie konstant pre program
 
 // Pomocne funkcie
-void print_hex(const char *label, uint8_t *data, int len);  // Vypis hexadecimalnych dat
+void print_hex(const char *label, uint8_t *data, int len);  // Vypise data v citatelnej forme pre kontrolu
 
-// Kryptograficke funkcie
-// Generuje kryptograficky bezpecne nahodne cisla pre pouzitie v sifrovani
-void generate_random_bytes(uint8_t *buffer, size_t size);
+// Zakladne kryptograficke funkcie
+void generate_random_bytes(uint8_t *buffer, size_t size);  // Vytvori bezpecne nahodne cisla
 
-// Serverova verzia derivacie kluca
-// Pouziva prijatu sol na vytvorenie rovnakeho kluca ako klient
-int derive_key_server(const char *password, const uint8_t *received_salt, uint8_t *key, uint8_t *salt);
+// Funkcie pre pracu s heslami
+int derive_key_server(const char *password, const uint8_t *received_salt,  // Server: Vytvori kluc z hesla a prijatej soli
+                     uint8_t *key, uint8_t *salt);
 
-// Klientska verzia derivacie kluca
-// Generuje novu sol a odvodi kluc z hesla
-int derive_key_client(const char *password, uint8_t *key, uint8_t *salt);
+int derive_key_client(const char *password, uint8_t *key, uint8_t *salt);  // Klient: Vytvori kluc z hesla a novej soli
+
+// Funkcie pre bezpecnost spojenia
+void rotate_key(uint8_t *current_key,    // Vytvori novy kluc z existujuceho pre lepsiu bezpecnost
+               const uint8_t *previous_key);
+
+void secure_wipe(void *data, size_t size);  // Bezpecne vymaze citlive data z pamate
+
+// Overovanie klucov
+void generate_key_validation(uint8_t *validation,   // Vytvori kontrolny kod pre overenie kluca
+                           const uint8_t *key);
+
+// Funkcie pre bezpecnu vymenu klucov
+void generate_ephemeral_keypair(uint8_t public_key[32],   // Vytvori docasny par klucov pre jedno spojenie
+                              uint8_t secret_key[32]);
+
+void compute_shared_secret(uint8_t shared_secret[32],     // Vypocita spolocny tajny kluc medzi klientom a serverom
+                         const uint8_t secret_key[32],
+                         const uint8_t peer_public[32]);
+
+void setup_session(uint8_t session_key[32],               // Pripravi sifrovane spojenie s novymi klucmi
+                  const uint8_t master_key[32],
+                  const uint8_t shared_key[32],
+                  const uint8_t session_nonce[24]);
 
 #endif // CRYPTO_UTILS_H

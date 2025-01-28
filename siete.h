@@ -1,20 +1,21 @@
 /********************************************************************************
- * Program:    Sietova komunikacia pre zabezpeceny prenos suborov
+ * Program:    Sietova komunikacia pre zabezpeceny prenos
  * Subor:      siete.h
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.0
  * Datum:      2024
  * 
  * Popis: 
- *     Hlavickovy subor definujuci sietove funkcie pre zabezpeceny prenos suborov.
- *     Obsahuje deklaracie funkcii pre:
- *     - Inicializaciu a ukoncenie sietoveho spojenia
- *     - Spravu socketov pre server a klienta
- *     - Prenos dat medzi klientom a serverom
+ *     Hlavickovy subor pre sietovu komunikaciu:
+ *     - Inicializacia a sprava sietovych spojeni
+ *     - Spolahlivy prenos dat a synchronizacia
+ *     - Platformovo-nezavisle sietove operacie
+ *     - Obsluha timeoutov a chybovych stavov
+ *     - Implementacia potvrdzovacieho protokolu
  * 
  * Zavislosti:
- *     - Standardne C kniznice
- *     - constants.h (definicie konstant pre program)
+ *     - Standardne C kniznice pre sietovu komunikaciu
+ *     - constants.h (konstanty programu)
  *******************************************************************************/
 
 #ifndef SIETE_H
@@ -28,6 +29,8 @@
 #include <unistd.h>       // Linux: Kniznica pre systemove volania (close, read, write)
 #include <sys/random.h>   // Linux: Generovanie kryptograficky bezpecnych nahodnych cisel
 #include <netinet/in.h>   // Linux: Sietove funkcie (adresy, porty, sockety)
+#include <errno.h>        // Linux: Kniznica pre systemove chyby
+#include <string.h>       // Linux: Kniznica pre pracu s retazcami
 #endif
 
 #include "constants.h"    // Definicie konstant pre program
@@ -41,6 +44,15 @@ void shutdown_socket(int sock);          // Bezpecne ukoncenie socketu
 void wait(void);                        // Cakacia funkcia pre synchronizaciu
 void set_timeout_options(int sock);      // Nastavenie timeoutu pre socket
 void cleanup_network(void);             // Ukoncenie Winsock pre Windows
+void set_socket_timeout(int sock, int timeout_ms);  // Nastavenie timeoutu pre socket
+
+// Helper functions for reliable data transmission
+ssize_t send_all(int sock, const void *buf, size_t size);
+ssize_t recv_all(int sock, void *buf, size_t size);
+
+// Helper functions for reliable chunk size transmission 
+int send_chunk_size_reliable(int socket, uint32_t size);
+int receive_chunk_size_reliable(int socket, uint32_t *size);
 
 // Serverove funkcie
 // Funkcie potrebne pre vytvorenie a spravu serverovej casti
@@ -61,13 +73,15 @@ int wait_for_key_acknowledgment(int socket);  // Caka na potvrdenie kluca
 // Zdielane funkcie pre prenos zasifrovanych dat
 int send_file_name(int socket, const char *file_name);      // Posle nazov suboru
 int receive_file_name(int socket, char *file_name, size_t max_len);  // Prijme nazov suboru
-int send_chunk_size(int socket, uint32_t size);            // Posle velkost bloku dat
-int receive_chunk_size(int socket, uint32_t *size);        // Prijme velkost bloku dat
 int send_encrypted_chunk(int socket, const uint8_t *nonce, const uint8_t *tag,  // Posle zasifrovany blok
                         const uint8_t *data, size_t data_len);
 int receive_encrypted_chunk(int socket, uint8_t *nonce, uint8_t *tag,   // Prijme zasifrovany blok
-                          uint8_t *data, size_t data_len);
+                          uint8_t *data, uint32_t data_len);
 int send_transfer_ack(int socket);       // Posle potvrdenie o prenose
 int wait_for_transfer_ack(int socket);   // Caka na potvrdenie o prenose
+
+// Funkcie pre synchronizaciu
+int send_session_sync(int socket); // Posle synchronizacnu spravu
+int wait_for_session_sync(int socket); // Caka na synchronizacnu spravu
 
 #endif // SIETE_H

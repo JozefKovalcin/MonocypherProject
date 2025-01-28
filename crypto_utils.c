@@ -1,21 +1,22 @@
 /********************************************************************************
- * Program:    Implementácia kryptografických utilít pre zabezpečený prenos
+ * Program:    Kryptograficke nastroje pre zabezpeceny prenos
  * Subor:      crypto_utils.c
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.0
  * Datum:      2024
  * 
  * Popis: 
- *     Implementuje kryptografické funkcie pre zabezpečený prenos súborov:
- *     - Generovanie náhodných čísel s využitím systémových funkcií
- *     - Deriváciu kľúča z hesla pomocou Argon2
- *     - Pomocné funkcie pre výpis a správu kryptografických dát
+ *     Hlavickovy subor pre kryptograficke operacie:
+ *     - Bezpecne generovanie nahodnych cisel pre nonce a salt
+ *     - Bezpecna derivacia klucov pomocou Argon2
+ *     - Rotacia a validacia klucov
+ *     - Ephemeral kryptografia pre forward secrecy pomocou X25519
+ *     - Vytvaranie a sprava relacii
  * 
  * Zavislosti:
- *     - Monocypher 4.0.2 (implementacia sifrovania)
- *     - Standardné C knižnice
- *     - crypto_utils.h (deklaracie kryptografickych funkcii)
- *     - constants.h (definicie konstant pre program)
+ *     - Monocypher 4.0.2 (sifrovacie algoritmy)
+ *     - crypto_utils.h (deklaracie funkcii)
+ *     - constants.h (konstanty programu)
  *******************************************************************************/
 
 // Systemove kniznice
@@ -28,9 +29,13 @@
 #include <bcrypt.h>       // Windows: Kryptograficke funkcie
 #else
 #include <sys/stat.h>     // Linux: Operacie so subormi a ich atributmi
+#include <sys/random.h>   // Linux: Generovanie kryptograficky bezpecnych nahodnych cisel
+#include <errno.h>        // Linux: Kniznica pre systemove chyby
+#include <string.h>       // Linux: Kniznica pre pracu s retazcami
 #endif
 
 #include "crypto_utils.h" // Pre kryptograficke funkcie
+#include "constants.h"    // Add this include for constants
 
 // Pomocna funkcia pre vypis kryptografickych dat
 // Pouziva sa pri ladeni a kontrole
@@ -48,12 +53,12 @@ void print_hex(const char *label, uint8_t *data, int len) {
 void generate_random_bytes(uint8_t *buffer, size_t size) {
 #ifdef __linux__
     if (getrandom(buffer, size, 0) == -1) {
-        fprintf(stderr, "Error: Failed to generate random bytes (%s)\n", strerror(errno));
+        fprintf(stderr, ERR_RANDOM_LINUX, strerror(errno));
         exit(1);
     }
 #elif defined(_WIN32)
     if (BCryptGenRandom(NULL, buffer, size, BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0) {
-        fprintf(stderr, "Error: Failed to generate random bytes (BCrypt error)\n");
+        fprintf(stderr, ERR_RANDOM_WINDOWS);
         exit(1);
     }
 #else
@@ -74,7 +79,7 @@ static int derive_key_internal(const char *password, const uint8_t *salt_input,
     // Kontrola ci mame vsetky potrebne vstupy
     // Ak chyba heslo, kluc alebo sol, funkcia nemoze pokracovat
     if (!password || !key || !salt) {
-        fprintf(stderr, "Error: Invalid parameters for key derivation\n");
+        fprintf(stderr, ERR_KEY_DERIVE_PARAMS);
         return -1;
     }
 
@@ -108,7 +113,7 @@ static int derive_key_internal(const char *password, const uint8_t *salt_input,
 
     void *work_area = malloc(config.nb_blocks * 1024);    // Alokovanie pracovnej pamate (65536 * 1024 = 64 MB)
     if (!work_area) {
-        fprintf(stderr, "Error: Failed to allocate memory for key derivation\n");
+        fprintf(stderr, ERR_KEY_DERIVE_MEMORY);
         return -1;
     }
 
@@ -137,4 +142,72 @@ int derive_key_server(const char *password, const uint8_t *received_salt,
 // Generuje novu sol a odvodi kluc
 int derive_key_client(const char *password, uint8_t *key, uint8_t *salt) {
     return derive_key_internal(password, NULL, key, salt, 1);
+}
+
+// Rotacia aktualneho kluca pre vytvorenie noveho
+// Pouziva sa na pravidelnu obmenu klucov pre lepsiu bezpecnost
+void rotate_key(uint8_t *current_key, const uint8_t *previous_key) {
+    uint8_t nonce[NONCE_SIZE];
+    // Pouzitie fixnej hodnoty nonce pre deterministicku rotaciu
+    memset(nonce, 0xFF, NONCE_SIZE);
+    
+    // Pouzitie BLAKE2b s pevnymi parametrami pre deterministicke odvodzovanie klucov
+    crypto_blake2b_ctx ctx;
+    crypto_blake2b_init(&ctx, KEY_SIZE);
+    crypto_blake2b_update(&ctx, previous_key, KEY_SIZE);
+    crypto_blake2b_update(&ctx, nonce, NONCE_SIZE);
+    crypto_blake2b_final(&ctx, current_key);
+    
+    // Bezpecne vymazanie citlivych dat z pamate
+    crypto_wipe(&ctx, sizeof(ctx));
+    secure_wipe(nonce, NONCE_SIZE);
+}
+
+// Bezpecne vymazanie citlivych dat z pamate
+// Volatile zabranuje optimalizatoru odstranit mazanie
+void secure_wipe(void *data, size_t size) {
+    volatile uint8_t *p = (volatile uint8_t *)data;
+    while (size--) {
+        *p++ = 0;
+    }
+}
+
+// Vytvorenie validacneho kodu pre overenie spravnosti kluca
+// Pouziva sa na kontrolu ci obe strany maju rovnaky kluc
+void generate_key_validation(uint8_t *validation, const uint8_t *key) {
+    crypto_blake2b_ctx ctx;
+    crypto_blake2b_init(&ctx, VALIDATION_SIZE);  // Vzdy pouzijeme 16 bajtov pre validaciu
+    crypto_blake2b_update(&ctx, key, KEY_SIZE);
+    crypto_blake2b_final(&ctx, validation);
+    crypto_wipe(&ctx, sizeof(ctx));
+}
+
+// Generovanie docasneho paru klucov pre Diffie-Hellman vymenu
+// Zabezpecuje forward secrecy - aj pri kompromitacii dlhodobeho kluca su predchadzajuce spravy chranene
+void generate_ephemeral_keypair(uint8_t public_key[KEY_SIZE], uint8_t secret_key[KEY_SIZE]) {
+    generate_random_bytes(secret_key, KEY_SIZE);
+    crypto_x25519_public_key(public_key, secret_key);
+}
+
+// Vypocet zdielaneho tajomstva pomocou Diffie-Hellman vymeny
+// Kombinuje nas sukromny kluc s verejnym klucom protistrany
+void compute_shared_secret(uint8_t shared_secret[KEY_SIZE],
+                          const uint8_t secret_key[KEY_SIZE],
+                          const uint8_t peer_public[KEY_SIZE]) {
+    crypto_x25519(shared_secret, secret_key, peer_public);
+}
+
+// Vytvorenie relacie kombinaciou hlavneho kluca a zdielaneho tajomstva
+// Pridava dodatocnu vrstvu zabezpecenia pomocou session_nonce
+void setup_session(uint8_t session_key[KEY_SIZE],
+                  const uint8_t master_key[KEY_SIZE],
+                  const uint8_t shared_key[KEY_SIZE], 
+                  const uint8_t session_nonce[NONCE_SIZE]) {
+    crypto_blake2b_ctx ctx;
+    crypto_blake2b_init(&ctx, KEY_SIZE);
+    crypto_blake2b_update(&ctx, master_key, KEY_SIZE);
+    crypto_blake2b_update(&ctx, shared_key, KEY_SIZE);
+    crypto_blake2b_update(&ctx, session_nonce, NONCE_SIZE);
+    crypto_blake2b_final(&ctx, session_key);
+    crypto_wipe(&ctx, sizeof(ctx));
 }
