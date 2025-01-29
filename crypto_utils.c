@@ -2,7 +2,7 @@
  * Program:    Kryptograficke nastroje pre zabezpeceny prenos
  * Subor:      crypto_utils.c
  * Autor:      Jozef Kovalcin
- * Verzia:     1.0.0
+ * Verzia:     1.0.1
  * Datum:      2024
  * 
  * Popis: 
@@ -26,6 +26,7 @@
 
 #ifdef _WIN32
 #include <winsock2.h>     // Windows: Zakladna sietova kniznica
+#include <windows.h>      // Windows: Zakladne systemove funkcie
 #include <bcrypt.h>       // Windows: Kryptograficke funkcie
 #else
 #include <sys/stat.h>     // Linux: Operacie so subormi a ich atributmi

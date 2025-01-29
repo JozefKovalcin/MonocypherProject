@@ -2,7 +2,7 @@
  * Program:    Server pre zabezpeceny prenos suborov
  * Subor:      server.c
  * Autor:      Jozef Kovalcin
- * Verzia:     1.0.0
+ * Verzia:     1.0.1
  * Datum:      2024
  * 
  * Popis: 

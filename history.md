@@ -1,5 +1,5 @@
 # Historia zmien
-## 27. Januaar 2025
+## 27. Januaar 2025 1.0.1
 
 ### Strukturalne zmeny
 - Implementacia forward secrecy pomocou Diffie–Hellman
@@ -12,7 +12,7 @@
 - Rozsirenie mnostva chybovych sprav v programe
 
   
-## 19. December 2024
+## 19. December 2024 1.0.0
 
 ### Strukturalne zmeny
 - Vytvorenie novych suborov:

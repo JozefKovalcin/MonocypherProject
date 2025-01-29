@@ -2,7 +2,7 @@
  * Program:    Implementacia sietovych funkcii pre zabezpeceny prenos suborov
  * Subor:      siete.c
  * Autor:      Jozef Kovalcin
- * Verzia:     1.0.0
+ * Verzia:     1.0.1
  * Datum:      2024
  * 
  * Popis: 
@@ -25,6 +25,9 @@
 #include <winsock2.h>     // Windows: Zakladna sietova kniznica
 #include <ws2tcpip.h>     // Windows: Rozsirene sietove funkcie
 #include <windows.h>      // Windows: Zakladne systemove funkcie
+#ifndef MSG_NOSIGNAL
+    #define MSG_NOSIGNAL 0 // Windows: Nedefinovany flag pre send
+#endif
 #else
 #include <sys/socket.h>    // Linux: Sietove funkcie (socket, bind, listen, accept)
 #include <arpa/inet.h>     // Linux: Sietove funkcie (adresy, porty, sockety)
@@ -404,7 +407,7 @@ ssize_t send_all(int sock, const void *buf, size_t size) {
     size_t remaining = size;
     
     while (remaining > 0) {
-        ssize_t sent = send(sock, p, remaining, MSG_NOSIGNAL);
+        ssize_t sent = send(sock, (const char*)p, remaining, MSG_NOSIGNAL);
         if (sent <= 0) {
             if (errno == EINTR) continue;  // Prerusenie, skusi znova
             return -1;  // Chyba
@@ -422,7 +425,7 @@ ssize_t recv_all(int sock, void *buf, size_t size) {
     size_t remaining = size;
     
     while (remaining > 0) {
-        ssize_t received = recv(sock, p, remaining, MSG_WAITALL);
+        ssize_t received = recv(sock, (char*)p, remaining, MSG_WAITALL);
         if (received <= 0) {
             if (errno == EINTR) continue;  // Prerusenie, skusi znova
             return -1;  // Chyba alebo ukoncene spojenie

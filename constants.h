@@ -2,7 +2,7 @@
  * Program:    Konstanty pre zabezpeceny prenos suborov
  * Subor:      constants.h
  * Autor:      Jozef Kovalcin
- * Verzia:     1.0.0
+ * Verzia:     1.0.1
  * Datum:      2024
  *
  * Popis: 
@@ -96,7 +96,7 @@
 #define LOG_SESSION_START "Starting session setup...\n" // Sprava o zacati vytvarania spojenia
 #define LOG_SESSION_COMPLETE "Secure session established successfully\n" // Sprava o uspesnom vytvoreni spojenia
 #define LOG_PROGRESS_FORMAT "\rProgress: %s %.2f MB..." // Format spravy o priebehu prenosu
-#define LOG_SUCCESS_FORMAT "Success: File transfer completed. Total bytes %s: %.2f MB\n" // Format spravy o uspesnom dokonceni
+#define LOG_SUCCESS_FORMAT "Success: File transfer completed. Total bytes %s: %.3f MB\n" // Format spravy o uspesnom dokonceni
 
 // Zakladne chybove spravy
 #define ERR_SOCKET_SETUP "Error: Failed to set up server socket (%s)\n" // Chyba pri nastaveni socketu servera

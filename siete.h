@@ -2,7 +2,7 @@
  * Program:    Sietova komunikacia pre zabezpeceny prenos
  * Subor:      siete.h
  * Autor:      Jozef Kovalcin
- * Verzia:     1.0.0
+ * Verzia:     1.0.1
  * Datum:      2024
  * 
  * Popis: 

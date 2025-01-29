@@ -2,7 +2,7 @@
  * Program:    Kryptograficke nastroje pre zabezpeceny prenos
  * Subor:      crypto_utils.h
  * Autor:      Jozef Kovalcin
- * Verzia:     1.0.0
+ * Verzia:     1.0.1
  * Datum:      2024
  * 
  * Popis: 
