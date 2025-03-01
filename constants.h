@@ -10,7 +10,7 @@
  *     - Sietove nastavenia a casove limity
  *     - Velkosti vyrovnavacich pamatí
  *     - Kryptograficke parametre pre ChaCha20-Poly1305
- *     - Konfiguraciu Argon2 pre derivaciu klucov
+ *     - Konfiguraciu Argon2 pre odvodenie klucov
  *     - Chybove a informacne spravy
  *     - Riadiace konstanty pre protokol
  *
@@ -41,7 +41,7 @@
 #define KEY_SIZE 32                        // Velkost sifrovacieho kluca v bajtoch (256 bitov)
 #define NONCE_SIZE 24                      // Velkost jednorazovej hodnoty v bajtoch (192 bitov)
 #define TAG_SIZE 16                        // Velkost autentifikacneho kodu v bajtoch (128 bitov)
-#define SALT_SIZE 16                       // Velkost soli pre derivaciu kluca (128 bitov)
+#define SALT_SIZE 16                       // Velkost soli pre odvodenie kluca (128 bitov)
 #define VALIDATION_SIZE 16                 // Velkost overovacich dat v bajtoch
 #define SESSION_KEY_SIZE 32                // Velkost kluca pre jedno spojenie
 #define WORK_AREA_SIZE (1 << 16)           // Velkost pracovnej pamate pre Argon2
