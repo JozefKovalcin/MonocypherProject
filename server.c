@@ -50,7 +50,7 @@
 // Tieto premenne sa pouzivaju v celom programe pre desifrovacie operacie
 uint8_t key[KEY_SIZE];          // Hlavny sifrovaci kluc
 uint8_t nonce[NONCE_SIZE];      // Jednorazova hodnota pre kazdy blok
-uint8_t salt[SALT_SIZE];        // Sol pre derivaciu kluca
+uint8_t salt[SALT_SIZE];        // Sol pre odvodenie kluca
 
 #ifdef _WIN32
 // Implementacia getpass() pre Windows platformu
