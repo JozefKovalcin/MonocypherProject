@@ -8,7 +8,7 @@
  * Popis: 
  *     Hlavickovy subor pre kryptograficke operacie:
  *     - Bezpecne generovanie nahodnych cisel pre nonce a salt
- *     - Bezpecna derivacia klucov pomocou Argon2
+ *     - Bezpecne odvodenie klucov pomocou Argon2
  *     - Rotacia a validacia klucov
  *     - Ephemeral kryptografia pre forward secrecy pomocou X25519
  *     - Vytvaranie a sprava relacii
