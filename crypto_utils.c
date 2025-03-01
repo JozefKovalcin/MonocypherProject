@@ -67,7 +67,7 @@ void generate_random_bytes(uint8_t *buffer, size_t size) {
 #endif
 }
 
-// Interna implementacia derivacie kluca
+// Interna implementacia odvodenia kluca
 // Zdielana medzi klientom a serverom
 // Parametre:
 //   - password: heslo od uzivatela
@@ -132,14 +132,14 @@ static int derive_key_internal(const char *password, const uint8_t *salt_input,
     return 0;
 }
 
-// Serverova implementacia derivacie kluca
+// Serverova implementacia odvodenia kluca
 // Pouziva prijatu sol od klienta
 int derive_key_server(const char *password, const uint8_t *received_salt, 
                      uint8_t *key, uint8_t *salt) {
     return derive_key_internal(password, received_salt, key, salt, 0);
 }
 
-// Klientska implementacia derivacie kluca
+// Klientska implementacia odvodenia kluca
 // Generuje novu sol a odvodi kluc
 int derive_key_client(const char *password, uint8_t *key, uint8_t *salt) {
     return derive_key_internal(password, NULL, key, salt, 1);
