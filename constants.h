@@ -3,7 +3,7 @@
  * Subor:      constants.h
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.1
- * Datum:      2024
+ * Datum:      11-03-2025
  *
  * Popis: 
  *     Hlavickovy subor obsahujuci vsetky konstanty pouzivane v programe:
@@ -108,6 +108,7 @@
 #define ERR_SESSION_SETUP "Error: Failed to start session setup\n" // Chyba pri vytvarani spojenia
 #define ERR_KEY_EXCHANGE "Error: Key exchange failed\n" // Chyba pri vymene klucov
 #define ERR_SESSION_NONCE "Error: Failed to receive session nonce\n" // Chyba pri prijimani nonce pre spojenie
+#define ERR_SESSION_NONCE_SEND "Error: Failed to send session nonce\n" // Chyba pri odosielani nonce pre spojenie
 #define ERR_SESSION_CONFIRM "Error: Failed to confirm session setup\n" // Chyba pri potvrdzovani spojenia
 #define ERR_FILENAME_RECEIVE "Error: Failed to receive file name from client (%s)\n" // Chyba pri prijimani nazvu suboru
 #define ERR_FILE_CREATE "Error: Failed to create file '%s' (%s)\n" // Chyba pri vytvarani suboru
@@ -133,12 +134,17 @@
 #define ERR_SYNC_MESSAGE "Invalid sync message\n" // Neplatna synchronizacna sprava
 #define ERR_SYNC_ACK_SEND "Failed to send sync acknowledgment\n" // Chyba pri odosielani potvrdenia synchronizacie
 
-
 // Chybove spravy pre rotaciu klucov
 #define ERR_KEY_VALIDATE_SIGNAL "Error: Failed to receive validation marker\n" // Chyba pri prijimani validacneho markera
 #define ERR_KEY_VALIDATE_RECEIVE "Error: Failed to receive key validation\n" // Chyba pri prijimani validacie kluca
 #define ERR_KEY_VALIDATE_MISMATCH "Error: Key validation failed - keys do not match\n" // Kluce sa nezhoduju pri validacii
 #define ERR_KEY_ROTATION_READY "Error: Failed to confirm key rotation\n" // Chyba pri potvrdeni pripravenosti na novy kluc
+
+// Chybove spravy pre validaciu hlavneho kluca
+#define ERR_KEY_VALIDATION_SEND "Error: Failed to send master key validation\n" // Chyba pri odosielani validacie hlavneho kluca
+#define ERR_KEY_VALIDATION_RECEIVE "Error: Failed to receive master key validation\n" // Chyba pri prijimani validacie hlavneho kluca
+#define ERR_MASTER_KEY_MISMATCH "Error: Master keys do not match! Connection terminated\n" // Kluce sa nezhoduju - rozdielne hesla
+#define MSG_MASTER_KEY_MATCH "Master key validation successful. Keys match!\n" // Potvrdenie zhody klucov
 
 // Chybove spravy pre casove limity
 #define ERR_TIMEOUT_RECV "Error: Failed to set receive timeout (%s)\n" // Chyba pri nastaveni timeoutu pre prijem

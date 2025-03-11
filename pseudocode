@@ -1,0 +1,130 @@
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath}
+\usepackage{fullpage}  % For better page margins
+
+\begin{document}
+
+\section*{Protokol vymeny klucov Diffie-Hellman Pseudokod}
+
+\begin{algorithm}
+    \caption{Bezpecna vymena klucov: Inicializacia relacie s docasnymi klucmi}
+    \begin{algorithmic}[1]
+        \Function{initialize\_secure\_session}{$master\_key, is\_initiator$}
+            \State \textbf{Vstup:} $master\_key$ (32B tajomstvo), $is\_initiator$ (boolean)
+            \State \textbf{Vystup:} $session\_key$ (32B) alebo kod chyby
+            
+            \State \textbf{Obe strany:}
+            \State $ephemeral\_secret \gets \text{generate\_random\_bytes}(32)$ \Comment{Vygenerovanie tajneho X25519 kluca}
+            \State $ephemeral\_public \gets \text{crypto\_x25519\_public\_key}(ephemeral\_secret)$ \Comment{Odvodenie verejneho kluca}
+            
+            \If{$is\_initiator$} \Comment{Strana klienta}
+                \State \text{Cakat na verejny kluc servera}
+                \State $peer\_public \gets \text{recv\_all}(socket, 32)$
+                \State \text{Poslat verejny kluc klienta}
+                \State $\text{send\_all}(socket, ephemeral\_public, 32)$
+                
+                \State $session\_nonce \gets \text{generate\_random\_bytes}(24)$ \Comment{Vygenerovanie nonce pre relaciu}
+                \State $\text{send\_all}(socket, session\_nonce, 24)$ \Comment{Poslanie nonce serveru}
+            \Else \Comment{Strana servera}
+                \State \text{Poslat verejny kluc servera}
+                \State $\text{send\_all}(socket, ephemeral\_public, 32)$
+                \State \text{Cakat na verejny kluc klienta}
+                \State $peer\_public \gets \text{recv\_all}(socket, 32)$
+                
+                \State \text{Cakat na nonce relacie}
+                \State $session\_nonce \gets \text{recv\_all}(socket, 24)$
+            \EndIf
+            
+            \State \textbf{Obe strany:}
+            \State $shared\_secret \gets \text{crypto\_x25519}(ephemeral\_secret, peer\_public)$ \Comment{Vypocitanie DH tajomstva}
+            \State $session\_key \gets \text{setup\_session}(master\_key, shared\_secret, session\_nonce)$
+            
+            \State \text{secure\_wipe}($ephemeral\_secret$) \Comment{Bezpecne vymazanie tajneho kluca}
+            \State \text{secure\_wipe}($shared\_secret$) \Comment{Bezpecne vymazanie zdielaneho tajomstva}
+            
+            \State \Return $session\_key$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+    \caption{Odvodzovanie klucov relacie}
+    \begin{algorithmic}[1]
+        \Function{setup\_session}{$master\_key, shared\_key, session\_nonce$}
+            \State \textbf{Vstup:} $master\_key$ (32B), $shared\_key$ (32B z X25519), $session\_nonce$ (24B)
+            \State \textbf{Vystup:} $session\_key$ (32B)
+            
+            \State $ctx \gets \text{crypto\_blake2b\_init}(32)$ \Comment{Inicializacia BLAKE2b kontextu s vystupom 32B}
+            \State $\text{crypto\_blake2b\_update}(ctx, master\_key, 32)$ \Comment{Pridanie hlavneho kluca do hashu}
+            \State $\text{crypto\_blake2b\_update}(ctx, shared\_key, 32)$ \Comment{Pridanie zdielaneho tajomstva do hashu}
+            \State $\text{crypto\_blake2b\_update}(ctx, session\_nonce, 24)$ \Comment{Pridanie nonce do hashu}
+            \State $session\_key \gets \text{crypto\_blake2b\_final}(ctx)$ \Comment{Dokoncenie hashu do kluca relacie}
+            
+            \State \text{crypto\_wipe}($ctx$) \Comment{Bezpecne vymazanie hash kontextu}
+            
+            \State \Return $session\_key$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+    \caption{Protokol rotacie a validacie klucov}
+    \begin{algorithmic}[1]
+        \Function{rotate\_session\_key}{$current\_key, block\_count$}
+            \State \textbf{Vstup:} $current\_key$ (32B), $block\_count$ (pocitadlo)
+            \State \textbf{Vystup:} $new\_key$ (32B) alebo kod chyby
+            
+            \If{$block\_count \bmod KEY\_ROTATION\_BLOCKS = 0$} \Comment{Cas na rotaciu kluca}
+                \State \textbf{Strana klienta:}
+                \State $\text{send\_chunk\_size}(socket, KEY\_ROTATION\_MARKER)$ \Comment{Signal rotacie kluca}
+                \State \text{Cakat na potvrdenie servera}
+                
+                \State $rotation\_nonce \gets \text{generate\_random\_bytes}(24)$ \Comment{Vygenerovanie nonce pre rotaciu}
+                \State $\text{send\_all}(socket, rotation\_nonce, 24)$ \Comment{Poslanie nonce serveru}
+                
+                \State \textbf{Obe strany:}
+                \State $previous\_key \gets \text{copy}(current\_key)$ \Comment{Ulozenie aktualneho kluca}
+                \State $current\_key \gets \text{rotate\_key}(previous\_key, rotation\_nonce)$ \Comment{Vygenerovanie noveho kluca}
+                
+                \State \textbf{Strana klienta:}
+                \State $\text{send\_chunk\_size}(socket, KEY\_ROTATION\_VALIDATE)$ \Comment{Signal validacie}
+                \State $validation \gets \text{generate\_key\_validation}(current\_key)$ \Comment{Vytvorenie validacneho kodu}
+                \State $\text{send\_all}(socket, validation, 16)$ \Comment{Poslanie validacneho kodu}
+                
+                \State \textbf{Strana servera:}
+                \State $client\_validation \gets \text{recv\_all}(socket, 16)$ \Comment{Prijatie validacneho kodu}
+                \State $our\_validation \gets \text{generate\_key\_validation}(current\_key)$
+                \If{$client\_validation \neq our\_validation$}
+                    \State \Return \text{ERROR\_KEY\_VALIDATION\_FAILED}
+                \EndIf
+                \State $\text{send\_chunk\_size}(socket, KEY\_ROTATION\_READY)$ \Comment{Signal pripravenosti}
+                
+                \State \text{secure\_wipe}($previous\_key$) \Comment{Bezpecne vymazanie stareho kluca}
+            \EndIf
+            
+            \State \Return $current\_key$
+        \EndFunction
+        
+        \Function{generate\_key\_validation}{$key$}
+            \State \textbf{Vstup:} $key$ (32B)
+            \State \textbf{Vystup:} $validation$ (16B)
+            
+            \State $validation \gets \text{crypto\_blake2b}(key, \text{"VALIDATION"}, 16)$
+            
+            \State \Return $validation$
+        \EndFunction
+        
+        \Function{rotate\_key}{$previous\_key, rotation\_nonce$}
+            \State \textbf{Vstup:} $previous\_key$ (32B), $rotation\_nonce$ (24B)
+            \State \textbf{Vystup:} $new\_key$ (32B)
+            
+            \State $new\_key \gets \text{crypto\_blake2b}(previous\_key \parallel rotation\_nonce \parallel \text{"ROTATE"}, 32)$
+            
+            \State \Return $new\_key$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+\end{document}

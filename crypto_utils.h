@@ -3,7 +3,7 @@
  * Subor:      crypto_utils.h
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.1
- * Datum:      2024
+ * Datum:      11-03-2025
  * 
  * Popis: 
  *     Tento subor obsahuje funkcie pre:
@@ -12,6 +12,11 @@
  *     - Pravidelnu vymenu klucov pocas prenosu
  *     - Zabezpecenu vymenu klucov pomocou X25519
  *     - Spravovanie sifrovanych spojeni
+* Zavislosti:
+ *     - Monocypher 4.0.2 (sifrovacie algoritmy)
+ *     - constants.h (konstanty programu)
+ *     - platform.h (platform-specificke funkcie)
+ *******************************************************
  ******************************************************************************/
 
 #ifndef CRYPTO_UTILS_H
@@ -21,6 +26,7 @@
 
 #include "monocypher.h"  // Pre Monocypher kryptograficke funkcie
 #include "constants.h"    // Definicie konstant pre program
+#include "platform.h"     // Pre funkcie specificke pre operacny system
 
 // Pomocne funkcie
 void print_hex(const char *label, uint8_t *data, int len);  // Vypise data v citatelnej forme pre kontrolu
@@ -36,7 +42,8 @@ int derive_key_client(const char *password, uint8_t *key, uint8_t *salt);  // Kl
 
 // Funkcie pre bezpecnost spojenia
 void rotate_key(uint8_t *current_key,    // Vytvori novy kluc z existujuceho pre lepsiu bezpecnost
-               const uint8_t *previous_key);
+               const uint8_t *previous_key,
+               const uint8_t *nonce);    // Nahodny nonce pre rotaciu kluca
 
 void secure_wipe(void *data, size_t size);  // Bezpecne vymaze citlive data z pamate
 

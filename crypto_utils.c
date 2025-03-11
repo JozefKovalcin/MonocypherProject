@@ -3,7 +3,7 @@
  * Subor:      crypto_utils.c
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.1
- * Datum:      2024
+ * Datum:      11-03-2025
  * 
  * Popis: 
  *     Hlavickovy subor pre kryptograficke operacie:
@@ -17,6 +17,7 @@
  *     - Monocypher 4.0.2 (sifrovacie algoritmy)
  *     - crypto_utils.h (deklaracie funkcii)
  *     - constants.h (konstanty programu)
+ *     - platform.h (platform-specificke funkcie)
  *******************************************************************************/
 
 // Systemove kniznice
@@ -24,19 +25,9 @@
 #include <stdlib.h>       // Kniznica pre vseobecne funkcie (sprava pamate, konverzie, nahodne cisla)
 #include <string.h>       // Kniznica pre pracu s retazcami (kopirovanie, porovnavanie, spajanie)
 
-#ifdef _WIN32
-#include <winsock2.h>     // Windows: Zakladna sietova kniznica
-#include <windows.h>      // Windows: Zakladne systemove funkcie
-#include <bcrypt.h>       // Windows: Kryptograficke funkcie
-#else
-#include <sys/stat.h>     // Linux: Operacie so subormi a ich atributmi
-#include <sys/random.h>   // Linux: Generovanie kryptograficky bezpecnych nahodnych cisel
-#include <errno.h>        // Linux: Kniznica pre systemove chyby
-#include <string.h>       // Linux: Kniznica pre pracu s retazcami
-#endif
-
 #include "crypto_utils.h" // Pre kryptograficke funkcie
 #include "constants.h"    // Add this include for constants
+#include "platform.h"     // Pre funkcie specificke pre operacny system
 
 // Pomocna funkcia pre vypis kryptografickych dat
 // Pouziva sa pri ladeni a kontrole
@@ -52,19 +43,9 @@ void print_hex(const char *label, uint8_t *data, int len) {
 // Generovanie kryptograficky bezpecnych nahodnych cisel
 // Pouziva systemove generatory (BCrypt na Windows, getrandom na Linuxe)
 void generate_random_bytes(uint8_t *buffer, size_t size) {
-#ifdef __linux__
-    if (getrandom(buffer, size, 0) == -1) {
-        fprintf(stderr, ERR_RANDOM_LINUX, strerror(errno));
-        exit(1);
+    if (platform_generate_random_bytes(buffer, size) != 0) {
+        exit(1);  // Error pri generovani nahodnych cisel
     }
-#elif defined(_WIN32)
-    if (BCryptGenRandom(NULL, buffer, size, BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0) {
-        fprintf(stderr, ERR_RANDOM_WINDOWS);
-        exit(1);
-    }
-#else
-    #error "Unsupported platform for random number generation"
-#endif
 }
 
 // Interna implementacia odvodenia kluca
@@ -147,12 +128,7 @@ int derive_key_client(const char *password, uint8_t *key, uint8_t *salt) {
 
 // Rotacia aktualneho kluca pre vytvorenie noveho
 // Pouziva sa na pravidelnu obmenu klucov pre lepsiu bezpecnost
-void rotate_key(uint8_t *current_key, const uint8_t *previous_key) {
-    uint8_t nonce[NONCE_SIZE];
-    // Pouzitie fixnej hodnoty nonce pre deterministicku rotaciu
-    memset(nonce, 0xFF, NONCE_SIZE);
-    
-    // Pouzitie BLAKE2b s pevnymi parametrami pre deterministicke odvodzovanie klucov
+void rotate_key(uint8_t *current_key, const uint8_t *previous_key, const uint8_t *nonce) {
     crypto_blake2b_ctx ctx;
     crypto_blake2b_init(&ctx, KEY_SIZE);
     crypto_blake2b_update(&ctx, previous_key, KEY_SIZE);
@@ -161,7 +137,6 @@ void rotate_key(uint8_t *current_key, const uint8_t *previous_key) {
     
     // Bezpecne vymazanie citlivych dat z pamate
     crypto_wipe(&ctx, sizeof(ctx));
-    secure_wipe(nonce, NONCE_SIZE);
 }
 
 // Bezpecne vymazanie citlivych dat z pamate

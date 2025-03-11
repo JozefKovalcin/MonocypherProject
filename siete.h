@@ -3,7 +3,7 @@
  * Subor:      siete.h
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.1
- * Datum:      2024
+ * Datum:      11-03-2025
  * 
  * Popis: 
  *     Hlavickovy subor pre sietovu komunikaciu:
@@ -16,6 +16,7 @@
  * Zavislosti:
  *     - Standardne C kniznice pre sietovu komunikaciu
  *     - constants.h (konstanty programu)
+ *     - platform.h (platform-specificke funkcie)
  *******************************************************************************/
 
 #ifndef SIETE_H
@@ -23,17 +24,89 @@
 
 #include <stdint.h> // Kniznica pre datove typy (uint8_t, uint32_t)
 
-#ifdef _WIN32
-#include <winsock2.h>     // Windows: Zakladna sietova kniznica
-#else
-#include <unistd.h>       // Linux: Kniznica pre systemove volania (close, read, write)
-#include <sys/random.h>   // Linux: Generovanie kryptograficky bezpecnych nahodnych cisel
-#include <netinet/in.h>   // Linux: Sietove funkcie (adresy, porty, sockety)
-#include <errno.h>        // Linux: Kniznica pre systemove chyby
-#include <string.h>       // Linux: Kniznica pre pracu s retazcami
-#endif
-
 #include "constants.h"    // Definicie konstant pre program
+#include "platform.h"     // Platform-specificke funkcie
+
+// Platformovo-specificke makra
+#ifdef _WIN32
+    // Funkcie pre uvolnenie socketov - Windows verzie
+    #define SOCKET_CLOSE(sock) closesocket(sock)          // Uzatvori socket na Windows
+    #define NETWORK_CLEANUP() WSACleanup()                // Uvolni Winsock API
+    #define NETWORK_INIT() do { \
+        WSADATA wsaData; \
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) { \
+            fprintf(stderr, ERR_WINSOCK_INIT); \
+            exit(-1); \
+        } \
+    } while(0)                                            // Inicializuje Winsock API
+    
+    // Nastavenia socketov a timeouty pre Windows
+    #define SET_SOCKET_TIMEOUT(sock, timeout_val) do { \
+        DWORD timeout = (timeout_val); \
+        setsockopt((sock), SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout)); \
+        setsockopt((sock), SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout)); \
+    } while(0)                                            // Nastavi casove limity pre socket
+    
+    #define SET_KEEPALIVE(sock) do { \
+        BOOL keepalive = TRUE; \
+        setsockopt((sock), SOL_SOCKET, SO_KEEPALIVE, (char*)&keepalive, sizeof(keepalive)); \
+    } while(0)                                            // Zapne udrzovanie spojenia (keepalive)
+    
+    // Operacie pre ukoncenie a cakanie - Windows
+    #define SOCKET_SHUTDOWN(sock) do { \
+        shutdown((sock), SD_BOTH); \
+        Sleep(SOCKET_SHUTDOWN_DELAY_MS); \
+    } while(0)                                            // Bezpecne ukonci spojenie na sockete
+    
+    #define WAIT_MS(ms) Sleep(ms)                         // Pozastavi vykonavanie na dany cas v ms
+    
+    // Sprava TCP buffera - Windows
+    #define DISABLE_TCP_BUFFERING(sock) do { \
+        int flag = 1; \
+        setsockopt((sock), IPPROTO_TCP, TCP_NODELAY, (char*)&flag, sizeof(flag)); \
+    } while(0)                                            // Vypne Nagleho algoritmus - okamzite odosielanie
+    
+    // Prenos dat - Windows
+    #define SEND_FLAGS 0                                  // Ziadne specialne flagy pre Windows
+    #define RECV_DATA(sock, data, size) recv((sock), (char*)(data), (size), 0)  // Prijatie dat na Windows
+#else
+    // Funkcie pre uvolnenie socketov - UNIX/Linux verzie
+    #define SOCKET_CLOSE(sock) close(sock)                // Uzatvori socket na UNIX systemoch
+    #define NETWORK_CLEANUP() ((void)0)                   // Prazdna operacia - Linux nevyzaduje cistenie
+    #define NETWORK_INIT() ((void)0)                      // Prazdna operacia - Linux nevyzaduje inicializaciu
+    
+    // Nastavenia socketov a timeouty pre UNIX/Linux
+    #define SET_SOCKET_TIMEOUT(sock, timeout_val) do { \
+        struct timeval timeout; \
+        timeout.tv_sec = (timeout_val) / 1000; \
+        timeout.tv_usec = ((timeout_val) % 1000) * 1000; \
+        setsockopt((sock), SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout)); \
+        setsockopt((sock), SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout)); \
+    } while(0)                                            // Nastavi casove limity pre socket
+    
+    #define SET_KEEPALIVE(sock) do { \
+        int keepalive = 1; \
+        setsockopt((sock), SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)); \
+    } while(0)                                            // Zapne udrzovanie spojenia (keepalive)
+    
+    // Operacie pre ukoncenie a cakanie - UNIX/Linux
+    #define SOCKET_SHUTDOWN(sock) do { \
+        shutdown((sock), SHUT_RDWR); \
+        sleep(SOCKET_SHUTDOWN_DELAY_MS / 1000); \
+    } while(0)                                            // Bezpecne ukonci spojenie na sockete
+    
+    #define WAIT_MS(ms) usleep((ms) * 1000)               // Pozastavi vykonavanie na dany cas v ms
+    
+    // Sprava TCP buffera - UNIX/Linux
+    #define DISABLE_TCP_BUFFERING(sock) do { \
+        int flag = 1; \
+        setsockopt((sock), IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag)); \
+    } while(0)                                            // Vypne Nagleho algoritmus - okamzite odosielanie
+    
+    // Prenos dat - UNIX/Linux
+    #define SEND_FLAGS MSG_NOSIGNAL                       // Zabrani vzniku SIGPIPE signalu pri zavreti spojenia
+    #define RECV_DATA(sock, data, size) read((sock), (data), (size))  // Prijatie dat na UNIX systemoch
+#endif
 
 // Zakladne sietove funkcie
 // Funkcie pre spravu socketov a inicializaciu siete

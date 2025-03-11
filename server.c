@@ -3,7 +3,7 @@
  * Subor:      server.c
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.1
- * Datum:      2024
+ * Datum:      11-03-2025
  * 
  * Popis: 
  *     Implementacia servera pre zabezpeceny prenos suborov. Program zabezpecuje:
@@ -18,6 +18,7 @@
  *     - siete.h (sietova komunikacia)
  *     - crypto_utils.h (kryptograficke operacie)
  *     - constants.h (konstanty programu)
+ *     - platform.h (platform-specificke funkcie)
  *******************************************************************************/
 
 // Systemove kniznice
@@ -26,25 +27,11 @@
 #include <string.h>       // Kniznica pre pracu s retazcami (kopirovanie, porovnavanie, spajanie)
 #include <unistd.h>       // Kniznica pre systemove volania UNIX (procesy, subory, sokety)
 
-#ifdef _WIN32
-#include <winsock2.h>     // Windows: Zakladna sietova kniznica
-#include <ws2tcpip.h>     // Windows: Rozsirene sietove funkcie
-#include <windows.h>      // Windows: Zakladne systemove funkcie
-#include <bcrypt.h>       // Windows: Kryptograficke funkcie
-#include <conio.h>        // Windows: Konzolovy vstup/vystup (implementacia getpass())
-
-#else
-#include <sys/random.h>   // Linux: Generovanie kryptograficky bezpecnych nahodnych cisel
-#include <arpa/inet.h>    // Linux: Sietove funkcie (konverzia adries, sokety)
-#include <fcntl.h>        // Linux: Ovladanie vlastnosti suborov a socketov
-#include <sys/stat.h>     // Linux: Operacie so subormi a ich atributmi
-#include <errno.h>        // Linux: Sprava a hlasenie chyb
-#endif
-
 #include "monocypher.h"  // Pre Monocypher kryptograficke funkcie
 #include "siete.h"        // Pre sietove funkcie
 #include "constants.h"    // Definicie konstant pre program
 #include "crypto_utils.h" // Pre kryptograficke funkcie
+#include "platform.h"     // Pre funkcie specificke pre operacny system
 
 // Globalne premenne pre kryptograficke operacie
 // Tieto premenne sa pouzivaju v celom programe pre desifrovacie operacie
@@ -127,12 +114,31 @@ int main() {
 
     // Nacitanie hesla od uzivatela a odvodenie hlavneho kluca pomocou Argon2
     // Heslo sa pouzije na generovanie kluca, ktory sa pouzije na sifrovanie dat
-    char *password = getpass(PASSWORD_PROMPT_SERVER);
+    char *password = platform_getpass(PASSWORD_PROMPT);
     if (derive_key_server(password, salt, key, salt) != 0) {
         fprintf(stderr, ERR_KEY_DERIVATION);
         cleanup_sockets(client_socket, server_fd);
         return -1;
     }
+    
+    // Prijatie a overenie validacie kluca od klienta
+    uint8_t client_key_validation[VALIDATION_SIZE];
+    uint8_t server_key_validation[VALIDATION_SIZE];
+    
+    if (recv_all(client_socket, client_key_validation, VALIDATION_SIZE) != VALIDATION_SIZE) {
+        fprintf(stderr, ERR_KEY_VALIDATION_RECEIVE);
+        cleanup_sockets(client_socket, server_fd);
+        return -1;
+    }
+    
+    generate_key_validation(server_key_validation, key);
+    if (memcmp(client_key_validation, server_key_validation, VALIDATION_SIZE) != 0) {
+        fprintf(stderr, ERR_MASTER_KEY_MISMATCH);
+        cleanup_sockets(client_socket, server_fd);
+        return -1;
+    }
+    
+    printf(MSG_MASTER_KEY_MATCH);
 
     // Premenne pre vymenu klucov
     uint8_t ephemeral_secret[KEY_SIZE]; // Docasny tajny kluc
@@ -268,6 +274,14 @@ int main() {
                 transfer_complete = -1;
                 break;
             }
+            
+            // Prijatie nonce pre rotaciu kluca
+            uint8_t rotation_nonce[NONCE_SIZE];
+            if (recv_all(client_socket, rotation_nonce, NONCE_SIZE) != NONCE_SIZE) {
+                fprintf(stderr, ERR_SESSION_NONCE);
+                transfer_complete = -1;
+                break;
+            }
 
             // Validacia rotacie kluca
             uint32_t signal;
@@ -279,7 +293,7 @@ int main() {
             }
 
             memcpy(previous_key, session_key, KEY_SIZE);
-            rotate_key(session_key, previous_key);
+            rotate_key(session_key, previous_key, rotation_nonce);
 
             // Kontrola validacie kluca
             uint8_t client_validation[VALIDATION_SIZE];

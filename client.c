@@ -3,7 +3,7 @@
  * Subor:      client.c
  * Autor:      Jozef Kovalcin
  * Verzia:     1.0.0
- * Datum:      2024
+ * Datum:      11-03-2025
  * 
  * Popis: 
  *     Implementacia klienta pre zabezpeceny prenos suborov. Program zabezpecuje:
@@ -18,6 +18,7 @@
  *     - siete.h (sietova komunikacia)
  *     - crypto_utils.h (kryptograficke operacie)
  *     - constants.h (konstanty programu)
+ *     - platform.h (platform-specificke funkcie)
  ******************************************************************************/
 
 #include <stdio.h>        // Kniznica pre standardny vstup a vystup (nacitanie zo suborov, vypis na obrazovku)
@@ -25,28 +26,11 @@
 #include <string.h>       // Kniznica pre pracu s retazcami (kopirovanie, porovnavanie, spajanie)
 #include <unistd.h>       // Kniznica pre systemove volania UNIX (procesy, subory, sokety)
 
-#ifdef _WIN32
-#include <winsock2.h>     // Windows: Zakladna sietova kniznica
-#include <ws2tcpip.h>     // Windows: Rozsirene sietove funkcie
-#include <windows.h>      // Windows: Zakladne systemove funkcie
-#include <bcrypt.h>       // Windows: Kryptograficke funkcie
-#include <conio.h>        // Windows: Konzolovy vstup/vystup (implementacia getpass())
-
-#else
-#include <sys/random.h>   // Linux: Generovanie kryptograficky bezpecnych nahodnych cisel
-#include <arpa/inet.h>    // Linux: Sietove funkcie (konverzia adries, sokety)
-#include <dirent.h>       // Linux: Operacie s adresarmi
-#include <sys/stat.h>     // Linux: Operacie so subormi
-#include <fcntl.h>        // Linux: Nastavenia kontroly suborov
-#include <sys/time.h>     // Linux: Struktura pre cas (struct timeval)
-#include <errno.h>        // Linux: Sprava a hlasenie chyb
-#endif
-
 #include "monocypher.h"  // Pre Monocypher kryptograficke funkcie
 #include "siete.h"        // Pre sietove funkcie
 #include "constants.h"    // Shared constants
 #include "crypto_utils.h" // Pre kryptograficke funkcie
-
+#include "platform.h"     // Pre funkcie specificke pre operacny system
 
 // Globalne premenne pre kryptograficke operacie
 // Tieto premenne sa pouzivaju v celom programe pre sifrovacie operacie
@@ -124,7 +108,7 @@ int main() {
 
     // Nacitanie hesla od uzivatela a odvodenie hlavneho kluca pomocou Argon2
     // Heslo sa pouzije na generovanie kluca, ktory sa pouzije na sifrovanie dat
-    char *password = getpass(PASSWORD_PROMPT);
+    char *password = platform_getpass(PASSWORD_PROMPT);
     if (derive_key_client(password, key, salt) != 0) {
         fprintf(stderr, ERR_KEY_DERIVATION);
         cleanup_socket(sock);
@@ -134,6 +118,15 @@ int main() {
     // Posle salt serveru, aby mohol odvodi rovnaky kluc
     if (send_salt_to_server(sock, salt) < 0) {
         fprintf(stderr, ERR_SALT_RECEIVE);
+        cleanup_socket(sock);
+        return -1;
+    }
+
+    // Odoslanie validacie master kluca serveru
+    uint8_t key_validation[VALIDATION_SIZE];
+    generate_key_validation(key_validation, key);
+    if (send_all(sock, key_validation, VALIDATION_SIZE) != VALIDATION_SIZE) {
+        fprintf(stderr, ERR_KEY_VALIDATION_SEND);
         cleanup_socket(sock);
         return -1;
     }
@@ -315,16 +308,26 @@ int main() {
                 break;
             }
 
+            // Generovanie nahodneho nonce pre rotaciu kluca
+            uint8_t rotation_nonce[NONCE_SIZE];
+            generate_random_bytes(rotation_nonce, NONCE_SIZE);
+            
+            // Odoslanie rotacneho nonce
+            if (send_all(sock, rotation_nonce, NONCE_SIZE) != NONCE_SIZE) {
+                fprintf(stderr, ERR_SESSION_NONCE_SEND);
+                break;
+            }
+
             // Odoslanie validacneho signalu
             if (send_chunk_size_reliable(sock, KEY_ROTATION_VALIDATE) < 0) {
                 fprintf(stderr, ERR_KEY_VALIDATE_SIGNAL);
                 break;
             }
 
-            // Vykonanie rotacie kluca
+            // Vykonanie rotacie kluca s nahodnym nonce
             uint8_t previous_key[KEY_SIZE];
             memcpy(previous_key, session_key, KEY_SIZE);
-            rotate_key(session_key, previous_key);
+            rotate_key(session_key, previous_key, rotation_nonce);
 
             // Generovanie a odoslanie validacie kluca
             uint8_t validation[VALIDATION_SIZE];
