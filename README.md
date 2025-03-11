@@ -153,11 +153,3 @@ make clean
 mingw32-make clean
 ```
 
-## Limity a mozne vylepsenia
-
-- Implementacia threadov pre paralelne spracovanie
-- Podpora pre viacero sucasnych klientov
-- Komprimacia pred sifrovanim
-- Obnovenie prerusenych prenosov
-- GUI rozhranie
-
