@@ -1,4 +1,3 @@
-# Detect operating system
 ifeq ($(OS),Windows_NT)
     CC = gcc
     CFLAGS = -Wall -Wextra -O2
@@ -13,34 +12,26 @@ else
     EXT =
 endif
 
-# Source files
 COMMON_SRC = monocypher.c siete.c crypto_utils.c platform.c
 SERVER_SRC = server.c $(COMMON_SRC)
 CLIENT_SRC = client.c $(COMMON_SRC)
 
-# Header files for dependency tracking
-HEADERS = monocypher.h siete.h crypto_utils.h constants.h platform.h
+HEADERS = monocypher.h siete.h crypto_utils.h constants.h platform.h errors.h
 
-# Output executables
 SERVER = server$(EXT)
 CLIENT = client$(EXT)
 
-# Build targets
 all: $(SERVER) $(CLIENT)
 
-# Server compilation
 $(SERVER): $(SERVER_SRC) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(SERVER_SRC) $(LIBS)
 
-# Client compilation
 $(CLIENT): $(CLIENT_SRC) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(CLIENT_SRC) $(LIBS)
 
-# Clean target
 clean:
 	$(RM) $(SERVER) $(CLIENT)
 
-# Help target
 help:
 	@echo "Available targets:"
 	@echo "  all      - Build both server and client (default)"

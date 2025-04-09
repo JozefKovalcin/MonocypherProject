@@ -48,6 +48,7 @@
      #include <sys/stat.h>
      #include <fcntl.h>
      #include <errno.h>
+     #include <string.h>
      // Typy
      typedef int socket_t;
      #define INVALID_SOCKET_VALUE -1

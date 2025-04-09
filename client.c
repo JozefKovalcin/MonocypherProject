@@ -76,19 +76,59 @@ char *getpass(const char *prompt) {
 int main() {
     // KROK 1: Inicializacia spojenia so serverom
     // - Vytvorenie TCP socketu
-    // - Pripojenie na server (127.0.0.1)
+    // - Pripojenie na server (IP a port zadane uzivatelom)
     // - Overenie uspesnosti pripojenia
     int sock;
+    int port;
+    char port_str[6]; // Max 5 cislic + null terminator
 
     // Inicializacia sietovej kniznice pre Windows
     initialize_network();
 
-    // Vytvorenie TCP spojenia so serverom
-    // - vytvori socket
-    // - pripoji sa na lokalny server (127.0.0.1)
-    // - port je definovany v constants.h
-    if ((sock = connect_to_server(DEFAULT_SERVER_ADDRESS)) < 0) {
-        fprintf(stderr, ERR_SOCKET_SETUP, strerror(errno));
+    char server_ip[16]; // IP adresa servera
+ 
+    // Ziadanie IP adresy servera od uzivatela
+    printf(IP_ADDRESS_PROMPT, DEFAULT_SERVER_ADDRESS);
+    if (fgets(server_ip, sizeof(server_ip), stdin) == NULL) {
+        fprintf(stderr, ERR_IP_ADDRESS_READ);
+        return -1;
+    }
+ 
+    // Odstranenie znaku '\n' z konca retazca
+    size_t len = strlen(server_ip);
+    if (len > 0 && server_ip[len - 1] == '\n') {
+        server_ip[len - 1] = '\0';
+        len--;
+    }
+ 
+    // Ak nebola zadana IP adresa, pouzije sa predvolena adresa
+    if (len == 0) {
+        strcpy(server_ip, DEFAULT_SERVER_ADDRESS);
+    }
+ 
+    // Ziadanie cisla portu od uzivatela
+    printf(PORT_PROMPT);
+    if (fgets(port_str, sizeof(port_str), stdin) == NULL) {
+        fprintf(stderr, ERR_PORT_READ);
+        cleanup_network();
+        return -1;
+    }
+ 
+    // Konverzia portu na integer a validacia
+    char *endptr;
+    long port_long = strtol(port_str, &endptr, 10);
+    if (endptr == port_str || *endptr != '\n' || port_long < 1 || port_long > 65535) {
+        fprintf(stderr, ERR_PORT_INVALID);
+        cleanup_network();
+        return -1;
+    }
+    port = (int)port_long;
+ 
+    // Vytvorenie spojenia pomocou zadanej IP adresy a portu
+    if ((sock = connect_to_server(server_ip, port)) < 0) {
+        // Vypis chyby, ak sa nepodari pripojit k serveru
+        fprintf(stderr, ERR_CONNECTION_FAILED " Server IP: %s, Port: %d (%s)\n", server_ip, port, strerror(errno));
+        cleanup_network(); // Upratanie sietovych zdrojov pred ukoncenim
         return -1;
     }
 

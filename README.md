@@ -1,11 +1,11 @@
 # Zabezpeceny prenos suborov cez TCP
 
-Tento projekt implementuje system pre zabezpeceny prenos suborov cez TCP/IP siet s vyuzitim modernej kryptografie a pokrocilych bezpecnostnych prvkov. Program zabezpecuje end-to-end sifrovanie s autentifikaciou, perfect forward secrecy, a rotaciu klucov pocas prenosu.
+Tento projekt implementuje system pre zabezpeceny prenos suborov cez TCP/IP siet s vyuzitim modernej kryptografie a pokrocilych bezpecnostnych prvkov. Program zabezpecuje end-to-end sifrovanie s autentizaciou, perfect forward secrecy, a rotaciu klucov pocas prenosu.
 
 ## Bezpecnostne prvky
 
-### Sifrovanie a autentifikacia
-- ChaCha20-Poly1305 pre sifrovanie s autentifikaciou
+### Sifrovanie a autentizacia
+- ChaCha20-Poly1305 pre sifrovanie s autentizaciou
 - Unikatny nonce pre kazdy blok dat
 - MAC (Message Authentication Code) pre integritu dat
 - Kontrola podvrhnutia alebo upravy dat
@@ -26,7 +26,7 @@ Tento projekt implementuje system pre zabezpeceny prenos suborov cez TCP/IP siet
 ## Architektura systemu
 
 ### Client-Server Model
-- Klient iniciuje spojenie a autentifikaciu
+- Klient iniciuje spojenie a autenizaciu
 - Server overuje identitu klienta a prijima sifrovane subory
 - Obe strany spolupracuju na zabezpeceni komunikacie
 
@@ -34,7 +34,7 @@ Tento projekt implementuje system pre zabezpeceny prenos suborov cez TCP/IP siet
 
 #### Server (`server.c`)
 - Pocuva na TCP porte 8080
-- Autentifikuje prichadzajuce spojenia
+- Autentizuje prichadzajuce spojenia
 - Desifruje a overuje prijate data
 - Uklada subory s prefixom "received_"
 - Synchronizuje rotaciu klucov s klientom
@@ -93,7 +93,7 @@ mingw32-make all alebo .\build.bat
    - Vygeneruje sa spolocne tajomstvo pomocou X25519
    - Vytvori sa session kluc pre dane spojenie
 
-2. **Autentifikacia**:
+2. **Autentizacia**:
    - Klient vygeneruje nahodnu sol
    - Uzivatelia zadaju heslo na oboch stranach
    - Obe strany odvodia rovnaky kluc pomocou Argon2
@@ -121,7 +121,7 @@ mingw32-make all alebo .\build.bat
 - Historia komunikacie je chranena aj pri ziskani aktualnych klucov
 
 ### Ochrana integrity dat
-- Autentifikacia pomocou zdielaneho hesla
+- Autentizacia pomocou zdielaneho hesla
 - Validacia integrity pomocou MAC
 - Overovanie synchronizacie klucov
 
@@ -129,7 +129,7 @@ mingw32-make all alebo .\build.bat
 
 Program obsahuje robustnu detekciu a spracovanie chyb:
 - Timeout pri sietovych operaciach
-- Neuspesna autentifikacia
+- Neuspesna autentizacia
 - Corrupted alebo manipulovane data
 - Neuspesna synchronizacia klucov
 - Chyby pri praci so subormi

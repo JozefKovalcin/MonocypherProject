@@ -78,18 +78,38 @@ int main() {
     // Inicializacia sietovych prvkov
     int server_fd, client_socket;
     struct sockaddr_in client_addr;
+    int port; 
+    char port_str[6]; // Max 5 cislic + null terminator
 
     // Inicializacia Winsock pre Windows platformu
     initialize_network();
 
+    // Ziadanie cisla portu od uzivatela
+    printf(PORT_PROMPT);
+    if (fgets(port_str, sizeof(port_str), stdin) == NULL) {
+        fprintf(stderr, ERR_PORT_READ);
+        cleanup_network();
+        return -1;
+    }
+
+    // Konverzia portu na integer a validacia
+    char *endptr;
+    long port_long = strtol(port_str, &endptr, 10);
+    if (endptr == port_str || *endptr != '\n' || port_long < 1 || port_long > 65535) {
+        fprintf(stderr, ERR_PORT_INVALID);
+        cleanup_network();
+        return -1;
+    }
+    port = (int)port_long;
+
     // Vytvorenie a konfiguracia servera
-    if ((server_fd = setup_server()) < 0) {
+    if ((server_fd = setup_server(port)) < 0) {
         fprintf(stderr, ERR_SOCKET_SETUP, strerror(errno));
         cleanup_network();
         return -1;
     }
 
-    printf(LOG_SERVER_START);
+    printf(LOG_SERVER_START, port);
 
     if ((client_socket = accept_client_connection(server_fd, &client_addr)) < 0) {
         fprintf(stderr, ERR_CLIENT_ACCEPT, strerror(errno));
@@ -243,10 +263,10 @@ int main() {
     // Buffers pre prenos dat
     // ciphertext: Zasifrovane data z klienta
     // plaintext: Desifrovane data pre zapis
-    // tag: Autentifikacny tag pre overenie integrity
+    // tag: Autentizacny tag pre overenie integrity
     uint8_t ciphertext[TRANSFER_BUFFER_SIZE];  // Buffer pre zasifrovane data
     uint8_t plaintext[TRANSFER_BUFFER_SIZE];   // Buffer pre desifrovane data
-    uint8_t tag[TAG_SIZE];                     // Buffer pre autentifikacny tag
+    uint8_t tag[TAG_SIZE];                     // Buffer pre autentizacny tag
 
     // Prenos suboru s rotaciou klucov
     uint64_t block_count = 0;
