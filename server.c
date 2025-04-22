@@ -236,6 +236,31 @@ int main()
     // Nastavenie relacneho kluca
     setup_session(session_key, key, shared_secret, session_nonce);
 
+    // Overenie session key
+    uint8_t session_verify[32];
+
+    if (recv_all(client_socket, session_verify, sizeof(session_verify)) != sizeof(session_verify))
+    {
+        fprintf(stderr, ERR_SESSION_VERIF_RECEIVE_C);
+        cleanup_sockets(client_socket, server_fd);
+        return -1;
+    }
+    // Vytvorenie kontrolneho kodu pre overenie kluca
+    if (!verify_session_verification(session_verify, session_key))
+    {
+        fprintf(stderr, ERR_SESSION_VERIF_MISMATCH);
+        cleanup_sockets(client_socket, server_fd);
+        return -1;
+    }
+    // Pošli svoj HMAC klientovi
+    generate_session_verification(session_verify, session_key);
+    if (send_all(client_socket, session_verify, sizeof(session_verify)) != sizeof(session_verify))
+    {
+        fprintf(stderr, ERR_KEY_SESSION_VERIF);
+        cleanup_sockets(client_socket, server_fd);
+        return -1;
+    }
+
     // Bezpecne vymazanie citlivych dat
     secure_wipe(ephemeral_secret, KEY_SIZE);
     secure_wipe(shared_secret, KEY_SIZE);
@@ -346,6 +371,14 @@ int main()
             memcpy(previous_key, session_key, KEY_SIZE);
             rotate_key(session_key, previous_key, rotation_nonce);
 
+            // Vypis novy relacny kluc
+            printf("New session key: ");
+            for (int i = 0; i < KEY_SIZE; i++)
+            {
+                printf("%02x", session_key[i]);
+            }
+            printf("\n");
+            
             // Kontrola validacie kluca
             uint8_t client_validation[VALIDATION_SIZE];
             uint8_t our_validation[VALIDATION_SIZE];

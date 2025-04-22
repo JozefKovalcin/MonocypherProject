@@ -208,3 +208,29 @@ void setup_session(uint8_t session_key[KEY_SIZE],
     crypto_blake2b_final(&ctx, session_key);
     crypto_wipe(&ctx, sizeof(ctx));
 }
+
+// Vytvorenie kontrolneho kodu pre overenie relacie
+// Pouziva sa na kontrolu integrity spojenia
+void generate_session_verification(uint8_t *out, const uint8_t *session_key)
+{
+    const char *msg = "SESSION-VERIFY";
+    // Správne poradie a typy argumentov podľa Monocypher
+    crypto_blake2b_keyed(
+        out,                  // výstup
+        32,                   // veľkosť výstupu
+        session_key,          // kľúč
+        32,                   // veľkosť kľúča
+        (const uint8_t *)msg, // správa
+        strlen(msg)           // veľkosť správy
+    );
+}
+
+// Overenie kontrolneho kodu pre relaciu
+// Porovnava prijaty kod s vypocitanym kodom
+int verify_session_verification(const uint8_t *received, const uint8_t *session_key)
+{
+    uint8_t expected[32];
+    generate_session_verification(expected, session_key);
+    // Pouzi Monocypher funkciu pre konštantný čas porovnania
+    return crypto_verify32(received, expected) == 0;
+}

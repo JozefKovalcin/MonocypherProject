@@ -64,4 +64,8 @@ void setup_session(uint8_t session_key[32], // Pripravi sifrovane spojenie s nov
                    const uint8_t shared_key[32],
                    const uint8_t session_nonce[24]);
 
+void generate_session_verification(uint8_t *out, const uint8_t *session_key); // Vytvori kontrolny kod pre overenie spojenia
+
+int verify_session_verification(const uint8_t *received, const uint8_t *session_key); // Overi kontrolny kod spojenia
+
 #endif // CRYPTO_UTILS_H

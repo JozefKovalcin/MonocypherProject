@@ -44,9 +44,13 @@
 #define ERR_KEY_ROTATION_READY "Error: Failed to confirm key rotation\n"               // Chyba pri potvrdeni pripravenosti na novy kluc
 
 // Chybove spravy pre validaciu hlavneho kluca
-#define ERR_KEY_VALIDATION_SEND "Error: Failed to send master key validation\n"            // Chyba pri odosielani validacie hlavneho kluca
-#define ERR_KEY_VALIDATION_RECEIVE "Error: Failed to receive master key validation\n"      // Chyba pri prijimani validacie hlavneho kluca
-#define ERR_MASTER_KEY_MISMATCH "Error: Master keys do not match! Connection terminated\n" // Kluce sa nezhoduju - rozdielne hesla
+#define ERR_KEY_VALIDATION_SEND "Error: Failed to send master key validation\n"                 // Chyba pri odosielani validacie hlavneho kluca
+#define ERR_KEY_VALIDATION_RECEIVE "Error: Failed to receive master key validation\n"           // Chyba pri prijimani validacie hlavneho kluca
+#define ERR_MASTER_KEY_MISMATCH "Error: Master keys do not match! Connection terminated\n"      // Kluce sa nezhoduju - rozdielne hesla
+#define ERR_KEY_SESSION_VERIF "Error: Failed to send session verification\n"                    // Chyba pri odosielani kontrolneho kodu pre overenie spojenia
+#define ERR_SESSION_VERIF_RECEIVE_S "Error: Failed to receive session verification from server\n" // Chyba pri prijimani kontrolneho kodu pre overenie spojenia, server
+#define ERR_SESSION_VERIF_RECEIVE_C "Error: Failed to receive session verification from client\n" // Chyba pri prijimani kontrolneho kodu pre overenie spojenia, client
+#define ERR_SESSION_VERIF_MISMATCH "Error: Session verification mismatch detected!\n"           // Chyba pri overeni kontrolneho kodu spojenia
 
 // Chybove spravy pre casove limity
 #define ERR_TIMEOUT_RECV "Error: Failed to set receive timeout (%s)\n" // Chyba pri nastaveni timeoutu pre prijem

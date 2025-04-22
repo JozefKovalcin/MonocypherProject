@@ -253,6 +253,31 @@ int main()
     // Nastavenie relacneho kluca
     setup_session(session_key, key, shared_secret, session_nonce);
 
+    // Overenie relacneho kluca
+    uint8_t session_verify[32];
+    generate_session_verification(session_verify, session_key);
+    if (send_all(sock, session_verify, sizeof(session_verify)) != sizeof(session_verify))
+    {
+        fprintf(stderr, ERR_KEY_SESSION_VERIF);
+        cleanup_socket(sock);
+        return -1;
+    }
+    // Prijmi odpoveď od servera
+    uint8_t server_verify[sizeof(session_verify)];
+    if (recv_all(sock, server_verify, sizeof(server_verify)) != sizeof(server_verify))
+    {
+        fprintf(stderr, ERR_SESSION_VERIF_RECEIVE_S);
+        cleanup_socket(sock);
+        return -1;
+    }
+    // Overenie, ci server poslal spravnu kontrolu kluca
+    if (!verify_session_verification(server_verify, session_key))
+    {
+        fprintf(stderr, ERR_SESSION_VERIF_MISMATCH);
+        cleanup_socket(sock);
+        return -1;
+    }
+
     // Bezpecne vymazanie citlivych dat
     secure_wipe(ephemeral_secret, KEY_SIZE);
     secure_wipe(shared_secret, KEY_SIZE);
@@ -415,6 +440,14 @@ int main()
             uint8_t previous_key[KEY_SIZE];
             memcpy(previous_key, session_key, KEY_SIZE);
             rotate_key(session_key, previous_key, rotation_nonce);
+
+            // Vypis novy relacny kluc
+            printf("New session key: ");
+            for (int i = 0; i < KEY_SIZE; i++)
+            {
+                printf("%02x", session_key[i]);
+            }
+            printf("\n");
 
             // Generovanie a odoslanie validacie kluca
             uint8_t validation[VALIDATION_SIZE];
